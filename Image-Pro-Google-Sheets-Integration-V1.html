@@ -196,9 +196,24 @@ async function initMapFromSheet() {
         // Apply
         shape.tooltip_content = tooltip;
 
-        // --- Color Fill ---
-        shape.default_style.background_color = getStatusColor(status);
-        shape.default_style.background_opacity = 0.9;
+        // --- Background colors with opacity control ---
+        if (status.includes('available')) {
+          shape.default_style.background_color = '#75fb4c';
+          shape.default_style.background_opacity = 0.4;  // Green
+        } else if (status.includes('sold')) {
+          shape.default_style.background_color = '#c12928';
+          shape.default_style.background_opacity = 0.45; // Red
+        } else if (status.includes('reserved')) {
+          shape.default_style.background_color = '#ffae42';
+          shape.default_style.background_opacity = 0.45; // Orange
+        } else if (status.includes('leased')) {
+          shape.default_style.background_color = '#4c9aff';
+          shape.default_style.background_opacity = 0.45; // Blue
+        } else {
+          shape.default_style.background_color = '#808080';
+          shape.default_style.background_opacity = 0.3;  // Gray
+        }
+
         shape.default_style.stroke_opacity = 0;
       });
     };
