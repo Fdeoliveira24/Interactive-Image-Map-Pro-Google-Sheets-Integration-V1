@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      /* ------------------------------------------------------------------------------------------
+       * STORAGE CAVES SIDEBAR STYLING (VERSION 3)
+       * ------------------------------------------------------------------------------------------ */
+      body {
+        margin: 0;
+        padding: 0;
+        background: #000;
+        font-family: Arial, sans-serif;
+        color: #fff;
+      }
+
+      header {
+        background-color: #1f1f1f;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+      }
+
+      h2 {
+        font-size: 15px;
+        margin: 0;
+      }
+
+      select, button {
+        background: #222;
+        color: #fff;
+        border: 1px solid #444;
+        border-radius: 6px;
+        padding: 6px 10px;
+        margin-left: 5px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button {
+        background: #c12928;
+        border: none;
+        transition: background 0.2s;
+      }
+
+      button:hover {
+        background: #a92221;
+      }
+
+      iframe {
+        width: 100%;
+        height: 80vh;
+        border: none;
+      }
+
+      #stats {
+        background: #111;
+        text-align: center;
+        padding: 10px;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .stat {
+        display: inline-block;
+        margin: 0 8px;
+        font-weight: 600;
+      }
+
+      .available { color: #75fb4c; }
+      .reserved { color: #ffae42; }
+      .sold { color: #ff4c4c; }
+      .leased { color: #4c9aff; }
+    </style>
+  </head>
+  <body>
+    <!-- HEADER AREA -->
+    <header>
+      <h2>Storage Caves Map</h2>
+      <div>
+        <select id="locationSelect" onchange="changeLocation()">
+          <option value="Buford">Buford</option>
+          <option value="FortMill">Fort Mill</option>
+          <option value="Concord">Concord</option>
+        </select>
+        <button onclick="refreshMap()">↻</button>
+      </div>
+    </header>
+
+    <!-- EMBEDDED MAP -->
+    <iframe id="mapFrame" src="https://pxl360.com/interactive-map/storage-caves-v3.html"></iframe>
+
+    <!-- LIVE STATS -->
+    <div id="stats">
+      <div class="stat available">Available: —</div>
+      <div class="stat reserved">Reserved: —</div>
+      <div class="stat sold">Sold: —</div>
+      <div class="stat leased">Leased: —</div>
+    </div>
+
+    <script>
+      /* ------------------------------------------------------------------------------------------
+       * SIDEBAR FUNCTIONALITY (VERSION 3)
+       * ------------------------------------------------------------------------------------------ */
+
+      const mapURLs = {
+        Buford: "https://pxl360.com/interactive-map/storage-caves-v3.html",
+        FortMill: "https://pxl360.com/interactive-map/storage-caves-fort-mill.html",
+        Concord: "https://pxl360.com/interactive-map/storage-caves-concord.html"
+      };
+
+      /**
+       * changeLocation()
+       * Switches the map and reloads statistics for the selected site.
+       */
+      function changeLocation() {
+        const loc = document.getElementById("locationSelect").value;
+        const frame = document.getElementById("mapFrame");
+        frame.src = mapURLs[loc];
+        google.script.run.withSuccessHandler(updateStats).getUnitStats(loc);
+      }
+
+      /**
+       * refreshMap()
+       * Reloads the current map and refreshes data.
+       */
+      function refreshMap() {
+        const frame = document.getElementById("mapFrame");
+        frame.src = frame.src;
+        const loc = document.getElementById("locationSelect").value;
+        google.script.run.withSuccessHandler(updateStats).getUnitStats(loc);
+      }
+
+      /**
+       * updateStats()
+       * Displays the statistics returned by Apps Script.
+       */
+      function updateStats(data) {
+        document.querySelector(".available").textContent = `Available: ${data.available || 0}`;
+        document.querySelector(".reserved").textContent = `Reserved: ${data.reserved || 0}`;
+        document.querySelector(".sold").textContent = `Sold: ${data.sold || 0}`;
+        document.querySelector(".leased").textContent = `Leased: ${data.leased || 0}`;
+      }
+
+      // Load initial stats for the default location
+      google.script.run.withSuccessHandler(updateStats).getUnitStats("Buford");
+    </script>
+  </body>
+</html>
