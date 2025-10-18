@@ -42,6 +42,7 @@
     margin: 12px auto !important;
     text-align: center !important;
     width: fit-content !important;
+    text-decoration: none !important;
   }
   #lastUpdated {
     color: #ccc;
@@ -239,8 +240,14 @@ function getStatusColor(status) {
 }
 
 function formatPrice(value) {
-  if (!value) return '—';
-  return `$${Number(value).toLocaleString()}`;
+  if (!value || value.toString().trim() === '') return '—';
+
+  // If it's not a number, just return it as-is (e.g., "By Request")
+  const num = Number(value);
+  if (isNaN(num)) return value;
+
+  // Otherwise format it as currency
+  return `$${num.toLocaleString()}`;
 }
 
 // --- Ensure full load before running ---
