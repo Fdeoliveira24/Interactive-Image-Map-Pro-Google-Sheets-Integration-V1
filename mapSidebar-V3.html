@@ -1,151 +1,227 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <base target="_top">
-    <style>
-      /* ------------------------------------------------------------------------------------------
-       * STORAGE CAVES SIDEBAR STYLING (VERSION 3)
-       * ------------------------------------------------------------------------------------------ */
-      body {
-        margin: 0;
-        padding: 0;
-        background: #000;
-        font-family: Arial, sans-serif;
-        color: #fff;
-      }
-
-      header {
-        background-color: #1f1f1f;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px;
-      }
-
-      h2 {
-        font-size: 15px;
-        margin: 0;
-      }
-
-      select, button {
-        background: #222;
-        color: #fff;
-        border: 1px solid #444;
-        border-radius: 6px;
-        padding: 6px 10px;
-        margin-left: 5px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-
-      button {
-        background: #c12928;
-        border: none;
-        transition: background 0.2s;
-      }
-
-      button:hover {
-        background: #a92221;
-      }
-
-      iframe {
-        width: 100%;
-        height: 80vh;
-        border: none;
-      }
-
-      #stats {
-        background: #111;
-        text-align: center;
-        padding: 10px;
-        font-size: 13px;
-        line-height: 1.5;
-      }
-
-      .stat {
-        display: inline-block;
-        margin: 0 8px;
-        font-weight: 600;
-      }
-
-      .available { color: #75fb4c; }
-      .reserved { color: #ffae42; }
-      .sold { color: #ff4c4c; }
-      .leased { color: #4c9aff; }
-    </style>
-  </head>
-  <body>
-    <!-- HEADER AREA -->
-    <header>
-      <h2>Storage Caves Map</h2>
-      <div>
-        <select id="locationSelect" onchange="changeLocation()">
-          <option value="Buford">Buford</option>
-          <option value="FortMill">Fort Mill</option>
-          <option value="Concord">Concord</option>
-        </select>
-        <button onclick="refreshMap()">↻</button>
-      </div>
-    </header>
-
-    <!-- EMBEDDED MAP -->
-    <iframe id="mapFrame" src="https://pxl360.com/interactive-map/storage-caves-v3.html"></iframe>
-
-    <!-- LIVE STATS -->
-    <div id="stats">
-      <div class="stat available">Available: —</div>
-      <div class="stat reserved">Reserved: —</div>
-      <div class="stat sold">Sold: —</div>
-      <div class="stat leased">Leased: —</div>
+<head>
+  <base target="_top">
+  <style>
+    body { margin:0; background:#000; font-family:Arial,sans-serif; color:#fff; }
+    header { background:#1f1f1f; display:flex; justify-content:space-between; align-items:center; padding:10px; }
+    .controls{display:flex;align-items:center;gap:8px;}
+    select{background:#333;color:#fff;border:1px solid #555;border-radius:6px;padding:8px 10px;}
+    button{background:#c12928;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-weight:bold;cursor:pointer;}
+    button:hover{background:#a92221;}
+    .auto-toggle{display:flex;align-items:center;font-size:13px;color:#ccc;}
+    .auto-toggle input{margin-right:5px;}
+    iframe{width:100%;height:75vh;border:none;}
+    #stats{background:#111;text-align:center;padding:12px;font-size:14px;line-height:1.6;}
+    .stat{display:inline-block;margin:0 10px;font-weight:600;}
+    .available{color:#75fb4c}.reserved{color:#ffae42}.sold{color:#ff4c4c}.leased{color:#4c9aff}
+    #lastUpdated{display:block;font-size:12px;color:#888;margin-top:8px;}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="controls">
+      <select id="locationSelect"><option>Loading...</option></select>
+      <label class="auto-toggle"><input type="checkbox" id="autoToggle">Auto Refresh</label>
+      <button id="btnRefresh">↻</button>
     </div>
+  </header>
 
-    <script>
-      /* ------------------------------------------------------------------------------------------
-       * SIDEBAR FUNCTIONALITY (VERSION 3)
-       * ------------------------------------------------------------------------------------------ */
+  <iframe id="mapFrame"></iframe>
 
-      const mapURLs = {
-        Buford: "https://pxl360.com/interactive-map/storage-caves-v3.html",
-        FortMill: "https://pxl360.com/interactive-map/storage-caves-fort-mill.html",
-        Concord: "https://pxl360.com/interactive-map/storage-caves-concord.html"
-      };
+  <div id="stats">
+    <div class="stat available">Available: <span id="sAvail">—</span></div>
+    <div class="stat reserved">Reserved: <span id="sRes">—</span></div>
+    <div class="stat sold">Sold: <span id="sSold">—</span></div>
+    <div class="stat leased">Leased: <span id="sLease">—</span></div>
+    <span id="lastUpdated">—</span>
+  </div>
 
-      /**
-       * changeLocation()
-       * Switches the map and reloads statistics for the selected site.
-       */
-      function changeLocation() {
-        const loc = document.getElementById("locationSelect").value;
-        const frame = document.getElementById("mapFrame");
-        frame.src = mapURLs[loc];
-        google.script.run.withSuccessHandler(updateStats).getUnitStats(loc);
-      }
+  <script>
+    const MAP_URL = {
+      'Buford - GA':'https://pxl360.com/interactive-map/storage-caves-v3.html?sheet=Buford',
+      'Fort Mill - SC':'https://pxl360.com/interactive-map/storage-caves-fort-mill.html?sheet=FortMill',
+      'Concord - NC':'https://pxl360.com/interactive-map/storage-caves-concord.html?sheet=Concord',
+      'Concord 2 - NC':'https://pxl360.com/interactive-map/storage-caves-concord-location-2.html?sheet=Concord2',
+      'Lake Norman - NC':'https://pxl360.com/interactive-map/storage-caves-lake-norman.html?sheet=LakeNorman',
+      'Lexington - NC':'https://pxl360.com/interactive-map/storage-caves-lexington.html?sheet=Lexington',
+      'Nashville - TN':'https://pxl360.com/interactive-map/storage-caves-nashville.html?sheet=Nashville'
+    };
+    const AUTO_REFRESH_MS = 180000;
+    let currentLocation=null,autoTimer=null,lock=false;
+    const sel=document.getElementById('locationSelect'),
+          frame=document.getElementById('mapFrame'),
+          btn=document.getElementById('btnRefresh'),
+          auto=document.getElementById('autoToggle'),
+          sA=document.getElementById('sAvail'),
+          sR=document.getElementById('sRes'),
+          sS=document.getElementById('sSold'),
+          sL=document.getElementById('sLease'),
+          last=document.getElementById('lastUpdated');
 
-      /**
-       * refreshMap()
-       * Reloads the current map and refreshes data.
-       */
-      function refreshMap() {
-        const frame = document.getElementById("mapFrame");
-        frame.src = frame.src;
-        const loc = document.getElementById("locationSelect").value;
-        google.script.run.withSuccessHandler(updateStats).getUnitStats(loc);
-      }
+    function setMap(loc){
+      const url=MAP_URL[loc];
+      if(url) frame.src=url+'&t='+(Date.now()); // cache-bust to force reload
+    }
 
-      /**
-       * updateStats()
-       * Displays the statistics returned by Apps Script.
-       */
-      function updateStats(data) {
-        document.querySelector(".available").textContent = `Available: ${data.available || 0}`;
-        document.querySelector(".reserved").textContent = `Reserved: ${data.reserved || 0}`;
-        document.querySelector(".sold").textContent = `Sold: ${data.sold || 0}`;
-        document.querySelector(".leased").textContent = `Leased: ${data.leased || 0}`;
-      }
+    function applyStats(st){
+      sA.textContent=st?.available??'—';
+      sR.textContent=st?.reserved??'—';
+      sS.textContent=st?.sold??'—';
+      sL.textContent=st?.leased??'—';
+      last.textContent='Updated: '+new Date().toLocaleTimeString();
+    }
 
-      // Load initial stats for the default location
-      google.script.run.withSuccessHandler(updateStats).getUnitStats("Buford");
-    </script>
-  </body>
+    function refreshStats(loc){
+      google.script.run.withSuccessHandler(applyStats).getUnitStatsFor(loc);
+    }
+
+    function refreshAll(){
+      if(lock||!currentLocation)return;
+      lock=true;
+      setMap(currentLocation);
+      refreshStats(currentLocation);
+      setTimeout(()=>lock=false,300);
+    }
+
+    function setAuto(on){
+      if(autoTimer)clearInterval(autoTimer);
+      if(on)autoTimer=setInterval(refreshAll,AUTO_REFRESH_MS);
+      auto.checked=on;
+      localStorage.setItem('sc_auto',on?'1':'0');
+    }
+
+    btn.addEventListener('click',refreshAll);
+    auto.addEventListener('change',e=>setAuto(e.target.checked));
+    sel.addEventListener('change',()=>{
+      currentLocation=sel.value;
+      localStorage.setItem('sc_loc',currentLocation);
+      refreshAll();
+    });
+
+    google.script.run.withSuccessHandler(({locations,defaultLocation})=>{
+      sel.innerHTML='';
+      locations.forEach(n=>{
+        const o=document.createElement('option');
+        o.value=n;o.textContent=n;sel.appendChild(o);
+      });
+      const saved=localStorage.getItem('sc_loc');
+      currentLocation=locations.includes(saved)?saved:defaultLocation;
+      sel.value=currentLocation;
+      refreshAll();
+      if(localStorage.getItem('sc_auto')==='1')setAuto(true);
+    }).getLocationCatalog();
+  </script>
+</body>
 </html>
+
+<!--
+================================================================================
+STORAGE CAVES – SYSTEM REFERENCE GUIDE V3
+================================================================================
+PURPOSE:
+This block documents how to safely edit or expand the Storage Caves integration
+between Google Sheets, Apps Script, and Image Map Pro. Keep this section inside
+the HTML file so anyone maintaining the system can easily find it.
+
+--------------------------------------------------------------------------------
+CASE 1 — RENAMING A SHEET TAB
+--------------------------------------------------------------------------------
+When you rename a tab inside Google Sheets (example: "Buford - GA" → "Atlanta - GA"):
+
+1. Open your Apps Script file (Code.gs).
+2. Find the constant SHEET_MAP and update the value to match the new tab name.
+
+   Example:
+     const SHEET_MAP = {
+       Buford: "Atlanta - GA",   // old: "Buford - GA"
+       FortMill: "Fort Mill - SC"
+     };
+
+3. Save and redeploy (Manage Deployments → Update).
+4. The API URL ?sheet=Buford will now pull data from the new tab "Atlanta - GA".
+
+--------------------------------------------------------------------------------
+CASE 2 — CHANGING A MAP URL
+--------------------------------------------------------------------------------
+If the hosted map URL changes (example:
+https://pxl360.com/interactive-map/storage-caves-v3.html?sheet=Buford
+→
+https://pxl360.com/interactive-map/storage-caves-Atlanta.html?sheet=Buford)
+
+1. Open mapSidebar.html.
+2. Locate the MAP_URL constant and update only the URL for that location.
+
+   Example:
+     const MAP_URL = {
+       'Buford - GA': 'https://pxl360.com/interactive-map/storage-caves-Atlanta.html?sheet=Buford',
+       'Fort Mill - SC': 'https://pxl360.com/interactive-map/storage-caves-fort-mill.html?sheet=FortMill'
+     };
+
+3. Save the file. The sidebar dropdown will now open the new page.
+
+--------------------------------------------------------------------------------
+CASE 3 — CHANGING BOTH THE SHEET NAME AND SHORT CODE
+--------------------------------------------------------------------------------
+If you want to change both the Sheet name and the short ID parameter (?sheet=),
+update BOTH Code.gs and mapSidebar.html.
+
+1. In Code.gs (Apps Script):
+     const SHEET_MAP = {
+       Atlanta: "Atlanta - GA",   // key: short code  | value: actual sheet tab
+       FortMill: "Fort Mill - SC"
+     };
+
+2. In mapSidebar.html:
+     const MAP_URL = {
+       'Atlanta - GA': 'https://pxl360.com/interactive-map/storage-caves-Atlanta.html?sheet=Atlanta',
+       'Fort Mill - SC': 'https://pxl360.com/interactive-map/storage-caves-fort-mill.html?sheet=FortMill'
+     };
+
+→ Rule: The short code (Atlanta) must match everywhere: the ?sheet= parameter,
+   the SHEET_MAP key, and the URL used by Image Map Pro.
+
+--------------------------------------------------------------------------------
+CASE 4 — ADDING A NEW LOCATION
+--------------------------------------------------------------------------------
+When you add a new Google Sheet tab (example: "Greenville - SC"):
+
+1. In Code.gs:
+     const SHEET_MAP = {
+       Atlanta: "Atlanta - GA",
+       FortMill: "Fort Mill - SC",
+       Greenville: "Greenville - SC"  // new location
+     };
+
+2. In mapSidebar.html:
+     const MAP_URL = {
+       'Atlanta - GA': 'https://pxl360.com/interactive-map/storage-caves-Atlanta.html?sheet=Atlanta',
+       'Fort Mill - SC': 'https://pxl360.com/interactive-map/storage-caves-fort-mill.html?sheet=FortMill',
+       'Greenville - SC': 'https://pxl360.com/interactive-map/storage-caves-greenville.html?sheet=Greenville'
+     };
+
+3. Host a new Image Map Pro export at that URL and ensure its internal
+   SHEET_JSON_URL points to:
+     https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec?sheet=Greenville
+
+--------------------------------------------------------------------------------
+TESTING YOUR CHANGES
+--------------------------------------------------------------------------------
+1. Open this in your browser:
+     https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec?sheet=Atlanta
+2. You should see live JSON output from that specific tab.
+3. If you get an error, check for typos in your SHEET_MAP keys or tab names.
+
+--------------------------------------------------------------------------------
+REFERENCE SUMMARY
+--------------------------------------------------------------------------------
+- The SHEET_MAP object (in Code.gs) links short IDs → real Sheet tab names.
+- The MAP_URL object (in mapSidebar.html) links Sheet tab labels → hosted map URLs.
+- The short ID (e.g., Buford, Atlanta) is the connector between everything.
+- Each location is fully isolated — changes in one tab or map never affect another.
+- Always redeploy the Apps Script (Manage Deployments → Update) after editing Code.gs.
+
+================================================================================
+END OF SYSTEM REFERENCE GUIDE
+================================================================================
+-->
